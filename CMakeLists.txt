@@ -5,10 +5,9 @@ project(Netlink)
 
 include_directories(include/)
 
-#set(SOURCE
-#    src/*)
 set(SRC_FILES ${PROJECT_SOURCE_DIR}/src/main.cpp
               ${PROJECT_SOURCE_DIR}/src/netlink_socket.cpp
+              ${PROJECT_SOURCE_DIR}/src/utils.cpp
             )
 
 # add the executable
