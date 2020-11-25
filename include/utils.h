@@ -7,11 +7,18 @@
 namespace network_monitor::utils{
 
     enum InterfaceState{
-    DOWN_NOT_RUNNING,
-    DOWN_RUNNING,
-    UP_NOT_RUNNING,
-    UP_RUNNING
-};
+        DOWN_NOT_RUNNING,
+        DOWN_RUNNING,
+        UP_NOT_RUNNING,
+        UP_RUNNING
+    };
+
+    struct Interface{
+        std::string name;
+        std::string address;
+        InterfaceState state;
+        int index;
+    };
 
     InterfaceState parseInterfaceState(const nlmsghdr *nh);
     std::string parseInterfaceName(const nlmsghdr *nh);

@@ -17,7 +17,10 @@ try{
         if(argc == 2){
             if (std::string(argv[1]) == "listen"){
                 nl_socket.startListening();
+            } else if(std::string(argv[1]) == "get"){
+                nl_socket.getAllInterfaces();
             }
+
         } else if(argc == 3){
             if(std::string(argv[1]) == "up"){
                 nl_socket.bringInterfaceUp(std::string(argv[2]));

@@ -1,5 +1,4 @@
 #include "netlink_socket.h"
-#include "utils.h"
 
 #include <sys/socket.h>
 #include <iostream>
@@ -149,6 +148,85 @@ void NetlinkSocket::interfaceAction(int if_action, std::string if_name){
     int ret = sendmsg(netlink_fd_, &msg, 0);
     if(ret==-1){
         std::cout << "Sending failed : " << strerror(errno) << std::endl;
+    }
+}
+
+void NetlinkSocket::getAllInterfaces(){
+    bind_to_socket();
+
+    int MAX_PAYLOAD = sizeof(nlmsghdr) + sizeof(ifinfomsg);
+
+    struct sockaddr_nl sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.nl_family = AF_NETLINK;
+    sa.nl_pid = 0;          // kernel
+    sa.nl_groups = 0;       // unicast
+
+    /* The nlmsghdr with payload to send */
+    safe_nlmsghdr nh ((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)));
+    memset(nh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
+    nh->nlmsg_pid = getpid();
+    nh->nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
+    nh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;  // request and dump all infos
+    nh->nlmsg_type = RTM_GETADDR;
+
+    struct iovec iov = { (void *)nh.get(), nh->nlmsg_len };
+
+    // Set payload
+    ifinfomsg *ifi = (ifinfomsg*) NLMSG_DATA(nh.get());
+    memset(ifi, 0, sizeof(ifi));
+
+    struct msghdr msg;
+    msg = { &sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
+    int ret = sendmsg(netlink_fd_, &msg, 0);
+    if(ret==-1){
+        std::cout << "Sending failed : " << strerror(errno) << std::endl;
+    }
+
+    auto interfaces = getResponse();
+    for(const auto& interface : interfaces){
+        std::cout << "["<<interface.index<<"] : " <<interface.name<< " " << interface.address << " " << interface.state << std::endl;
+    }
+}
+
+std::vector<Interface> NetlinkSocket::getResponse(){
+    char buf[8192];             // message buffer
+    struct iovec iov;           // message structure
+    iov.iov_base = buf;         // set message buffer as io
+    iov.iov_len = sizeof(buf);  // set size
+    struct sockaddr_nl sa;      // addr struct
+
+    // initialize protocol message header
+    struct msghdr msg {
+        .msg_name = &sa,                  // local address
+        .msg_namelen = sizeof(sa),        // address size
+        .msg_iov = &iov,                     // io vector
+        .msg_iovlen = 1                     // io size
+    };
+
+    // read and parse all messages from the netlink socket
+    std::vector<Interface> interfaces;
+    while (1) {
+        ssize_t status = TEMP_FAILURE_RETRY(recvmsg(netlink_fd_, &msg, MSG_DONTWAIT));
+
+        // message parser
+        Interface interface;
+        struct nlmsghdr *nh;
+        for (nh = (struct nlmsghdr*)buf; NLMSG_OK (nh, status); nh = NLMSG_NEXT (nh, status)) {   // read all messagess headers
+
+            switch(nh->nlmsg_type){
+                case RTM_NEWADDR:
+                    interface = {
+                        .name = parseInterfaceName(nh),
+                        .address = parseInterfaceIPAddress(nh),
+                        .state = parseInterfaceState(nh),
+                        .index = parseInterfaceIndex(nh)};
+                    interfaces.push_back(interface);
+                    break;
+                case NLMSG_DONE:
+                    return interfaces;
+            }
+        }
     }
 }
 

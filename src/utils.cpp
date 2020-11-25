@@ -1,6 +1,8 @@
 #include "utils.h"
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <iostream>
+#include <cstring>
 
 namespace network_monitor::utils
 {
@@ -8,16 +10,23 @@ namespace network_monitor::utils
     char ifAddress[256];    // network addr
     struct ifaddrmsg *ifa = (struct ifaddrmsg*)NLMSG_DATA(nh); // get data from the network interface
     int len = nh->nlmsg_len;
-
     rtattr *rtattr = IFA_RTA(ifa);
     auto rt_map = parseRtAttr(rtattr, len);
 
-    auto iter = rt_map.find(IFA_LOCAL); // Find the interface name attribute
 
-    if(iter != rt_map.end()){
-        inet_ntop(AF_INET, RTA_DATA(iter->second), ifAddress, sizeof(ifAddress)); // get IP addr
+    if(ifa->ifa_family == AF_INET){ // IPv4 address
+        auto iter = rt_map.find(IFA_LOCAL); // Find the interface name attribute
+        if(iter != rt_map.end()){
+            inet_ntop(AF_INET, RTA_DATA(iter->second), ifAddress, sizeof(ifAddress)); // get IP addr
+        }
+        return ifAddress;
+    } else{ // IPv6 address
+        auto iter = rt_map.find(IFA_ADDRESS); // Find the interface name attribute
+        if(iter != rt_map.end()){
+            inet_ntop(AF_INET6, RTA_DATA(iter->second), ifAddress, sizeof(ifAddress)); // get IP addr
+        }
+        return ifAddress;
     }
-    return ifAddress;
 }
 
 InterfaceState parseInterfaceState(const nlmsghdr *nh){
@@ -54,15 +63,14 @@ std::string parseInterfaceName(const nlmsghdr *nh){
     int len = nh->nlmsg_len;
     rtattr *rtattr = IFLA_RTA(ifi);
 
-    auto rt_map = parseRtAttr(rtattr, len); // Parse all the rtattr in that nlmsg
+    char name[IF_NAMESIZE];
+    memset(name, 0, IF_NAMESIZE);
 
-    auto iter = rt_map.find(IFLA_IFNAME); // Find the interface name attribute
-
-    if(iter != rt_map.end()){
-        return (char*)RTA_DATA(iter->second); // Convert it to string
-    }
-
-    return "unknown";
+    if(if_indextoname(ifi->ifi_index, name) == NULL){
+        std::cout << "Error occured when trying to get name " << strerror(errno) << std::endl;
+        return "unknown";
+    };
+    return std::string(name);
 }
 
 
