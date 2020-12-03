@@ -6,7 +6,7 @@ SetInterfaceCommand::SetInterfaceCommand(std::string interface_name, int action)
     memset(&request_, 0, sizeof(request_));
     request_.hdr.nlmsg_pid = getpid();
     request_.hdr.nlmsg_len = sizeof(request_);
-    request_.hdr.nlmsg_flags = NLM_F_REQUEST;
+    request_.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
     request_.hdr.nlmsg_type = RTM_NEWLINK;
 
     request_.msg.ifi_index=if_nametoindex(interface_name.c_str());

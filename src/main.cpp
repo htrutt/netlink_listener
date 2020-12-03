@@ -1,5 +1,4 @@
-#include "netlink_socket.h"
-#include "ICommand.h"
+#include "listen_events_command.h"
 #include "set_interface_command.h"
 #include "get_interface_command.h"
 #include <iostream>
@@ -15,14 +14,14 @@ int main(int argc, char *argv[])
     std::cout << "Starting netlink monitor" << std::endl;
 
 try{
-        NetlinkSocket nl_socket;
         if(argc < 2 ){
             std::cout<< "Too few args" << std::endl;
             return EXIT_FAILURE;
         }
         if(argc == 2){
             if (std::string(argv[1]) == "listen"){
-                nl_socket.startListening();
+                ListenEventsCommand cmd;
+                cmd.execute();
             } else if(std::string(argv[1]) == "get"){
                 GetInterfaceCommand cmd;
                 cmd.execute();

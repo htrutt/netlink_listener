@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "utils.h"
 
@@ -24,19 +25,29 @@ class NetlinkSocket {
     NetlinkSocket(const NetlinkSocket&) = delete;
     NetlinkSocket(NetlinkSocket&&) = delete;
 
-    void startListening();
-    void stopListening();
+    /*
+    *  Listen to events of type events and events will be given back to caller via callback
+    *  Will throw in case of error
+    */
+    void listenToEvents(uint32_t events, std::function<void(nlmsghdr*)> callback);
 
-    void getAllInterfaces();
+    /*
+    *  Send request without reading out response
+    *  Will throw in case of error
+    */
     void sendRequest(NetlinkMessage *request);
-    std::vector<network_monitor::utils::Interface> getResponse();
-
+    /*
+    * Send request and response will be sent to callback
+    *  Will throw in case of error
+    */
+    void sendRequest(NetlinkMessage *request, std::function<void(nlmsghdr*)> callback);
 
 private:
-    void bind_to_socket(unsigned int flags = 0);
+    void setupSocket(uint32_t events = 0);
+    void readResponse(std::function<void(nlmsghdr*)> callback);
 
-    int netlink_fd_;
-    int sequence_number_=0;
+    int netlink_fd_=-1;
+    uint32_t sequence_number_;
 };
 
 }

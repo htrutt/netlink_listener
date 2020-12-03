@@ -1,5 +1,7 @@
 #include "get_interface_command.h"
-#include <iostream>
+#include "utils.h"
+
+using namespace network_monitor::utils;
 
 namespace network_monitor::command{
 
@@ -12,9 +14,18 @@ GetInterfaceCommand::GetInterfaceCommand(){
 }
 
 void GetInterfaceCommand::execute(){
-    netlink_socket_.sendRequest(&request_);
+    std::vector<Interface> interfaces;
+    netlink_socket_.sendRequest(&request_, [&interfaces](nlmsghdr *nh){
+        if(nh->nlmsg_type == RTM_NEWADDR){
+            Interface interface = {
+                .name = parseInterfaceName(nh),
+                .address = parseInterfaceIPAddress(nh),
+                .state = parseInterfaceState(nh),
+                .index = parseInterfaceIndex(nh)};
+            interfaces.push_back(interface);
+        }
+    });
 
-    auto interfaces = netlink_socket_.getResponse();
     for(const auto& interface : interfaces){
         std::cout << "["<<interface.index<<"] : " <<interface.name<< " " << interface.address << " " << interface.state << std::endl;
     }
