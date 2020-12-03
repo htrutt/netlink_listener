@@ -10,14 +10,6 @@
 
 using namespace network_monitor::utils;
 
-namespace{
-    struct nlmsghdr_deleter{
-        void operator()(void* x) { free(x); }
-    };
-
-    typedef std::unique_ptr<struct nlmsghdr, nlmsghdr_deleter> safe_nlmsghdr;
-}
-
 namespace network_monitor {
 
 NetlinkSocket::NetlinkSocket(){
@@ -108,39 +100,15 @@ void NetlinkSocket::startListening(){
 
 }
 
-void NetlinkSocket::bringInterfaceUp(const std::string& if_name){
-    interfaceAction(IFF_UP, if_name);
-}
-void NetlinkSocket::bringInterfaceDown(const std::string& if_name){
-    interfaceAction(0, if_name);
-}
-
-void NetlinkSocket::interfaceAction(int if_action, std::string if_name){
+void NetlinkSocket::sendRequest(NetlinkMessage *request){
     bind_to_socket();
 
-    int MAX_PAYLOAD = 1024;
-
-    struct sockaddr_nl sa;
-    memset(&sa, 0, sizeof(sa));
+    struct sockaddr_nl sa{};
     sa.nl_family = AF_NETLINK;
     sa.nl_pid = 0;          // kernel
     sa.nl_groups = 0;       // unicast
 
-    safe_nlmsghdr nh ((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)));    /* The nlmsghdr with payload to send */
-    memset(nh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
-    nh->nlmsg_pid = getpid();
-    nh->nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
-    nh->nlmsg_flags = NLM_F_REQUEST;
-    nh->nlmsg_type = RTM_NEWLINK;
-
-    struct iovec iov = { (void *)nh.get(), nh->nlmsg_len };
-
-    ifinfomsg *ifi = (ifinfomsg*) NLMSG_DATA(nh.get());
-    memset(ifi, 0, sizeof(ifi));
-    ifi->ifi_index=if_nametoindex(if_name.c_str());
-    ifi->ifi_family = AF_UNSPEC;
-    ifi->ifi_flags = if_action;
-    ifi->ifi_change = 0x1;
+    struct iovec iov = { request, request->hdr.nlmsg_len };
 
     struct msghdr msg;
     msg = { &sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
@@ -152,36 +120,14 @@ void NetlinkSocket::interfaceAction(int if_action, std::string if_name){
 }
 
 void NetlinkSocket::getAllInterfaces(){
-    bind_to_socket();
+    NetlinkIfinfomsgMessage request;
+    memset(&request, 0, sizeof(request));
+    request.hdr.nlmsg_pid = getpid();
+    request.hdr.nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
+    request.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;  // request and dump all infos
+    request.hdr.nlmsg_type = RTM_GETADDR;
 
-    int MAX_PAYLOAD = sizeof(nlmsghdr) + sizeof(ifinfomsg);
-
-    struct sockaddr_nl sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.nl_family = AF_NETLINK;
-    sa.nl_pid = 0;          // kernel
-    sa.nl_groups = 0;       // unicast
-
-    /* The nlmsghdr with payload to send */
-    safe_nlmsghdr nh ((struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD)));
-    memset(nh.get(), 0, NLMSG_SPACE(MAX_PAYLOAD));
-    nh->nlmsg_pid = getpid();
-    nh->nlmsg_len = NLMSG_LENGTH(sizeof(ifinfomsg));
-    nh->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;  // request and dump all infos
-    nh->nlmsg_type = RTM_GETADDR;
-
-    struct iovec iov = { (void *)nh.get(), nh->nlmsg_len };
-
-    // Set payload
-    ifinfomsg *ifi = (ifinfomsg*) NLMSG_DATA(nh.get());
-    memset(ifi, 0, sizeof(ifi));
-
-    struct msghdr msg;
-    msg = { &sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
-    int ret = sendmsg(netlink_fd_, &msg, 0);
-    if(ret==-1){
-        std::cout << "Sending failed : " << strerror(errno) << std::endl;
-    }
+    sendRequest(&request);
 
     auto interfaces = getResponse();
     for(const auto& interface : interfaces){

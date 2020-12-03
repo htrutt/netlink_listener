@@ -7,6 +7,13 @@
 
 namespace network_monitor{
 
+struct NetlinkMessage {
+    nlmsghdr hdr;
+};
+
+struct NetlinkIfinfomsgMessage : public NetlinkMessage {
+    ifinfomsg msg;
+};
 
 
 class NetlinkSocket {
@@ -20,15 +27,13 @@ class NetlinkSocket {
     void startListening();
     void stopListening();
 
-    void bringInterfaceUp(const std::string& if_name);
-    void bringInterfaceDown(const std::string& if_name);
-
     void getAllInterfaces();
+    void sendRequest(NetlinkMessage *request);
+    std::vector<network_monitor::utils::Interface> getResponse();
+
 
 private:
     void bind_to_socket(unsigned int flags = 0);
-    void interfaceAction(int if_action, std::string if_name);
-    std::vector<network_monitor::utils::Interface> getResponse();
 
     int netlink_fd_;
     int sequence_number_=0;

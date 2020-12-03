@@ -60,8 +60,6 @@ int parseInterfaceIndex(const nlmsghdr *nh){
 
 std::string parseInterfaceName(const nlmsghdr *nh){
     ifinfomsg *ifi = (ifinfomsg*) NLMSG_DATA(nh);    // get information about changed network interface
-    int len = nh->nlmsg_len;
-    rtattr *rtattr = IFLA_RTA(ifi);
 
     char name[IF_NAMESIZE];
     memset(name, 0, IF_NAMESIZE);

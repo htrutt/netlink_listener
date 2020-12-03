@@ -1,9 +1,15 @@
 #include "netlink_socket.h"
+#include "ICommand.h"
+#include "set_interface_command.h"
+#include "get_interface_command.h"
 #include <iostream>
 #include <string>
 
-using network_monitor::NetlinkSocket;
 
+using network_monitor::NetlinkSocket;
+using namespace network_monitor::command;
+
+// TOOD improve arg parsing !! 
 int main(int argc, char *argv[])
 {
     std::cout << "Starting netlink monitor" << std::endl;
@@ -18,14 +24,17 @@ try{
             if (std::string(argv[1]) == "listen"){
                 nl_socket.startListening();
             } else if(std::string(argv[1]) == "get"){
-                nl_socket.getAllInterfaces();
+                GetInterfaceCommand cmd;
+                cmd.execute();
             }
 
         } else if(argc == 3){
             if(std::string(argv[1]) == "up"){
-                nl_socket.bringInterfaceUp(std::string(argv[2]));
+                SetInterfaceCommand cmd(std::string(argv[2]), InterfaceAction::UP);
+                cmd.execute();
             }else if (std::string(argv[1]) == "down"){
-                nl_socket.bringInterfaceDown(std::string(argv[2]));
+                SetInterfaceCommand cmd(std::string(argv[2]), InterfaceAction::DOWN);
+                cmd.execute();
             }
         }
     } catch (std::exception &e){
