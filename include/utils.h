@@ -24,6 +24,7 @@ namespace network_monitor::utils{
     std::string parseInterfaceName(const nlmsghdr *nh);
     std::string parseInterfaceIPAddress(const nlmsghdr *nh);
     int parseInterfaceIndex(const nlmsghdr *nh);
+    unsigned int parseInterfaceMtu(const nlmsghdr *nh);
 
     std::map<int, rtattr*> parseRtAttr(struct rtattr *rtattr, int len);
 

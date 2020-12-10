@@ -112,7 +112,6 @@ void NetlinkSocket::readResponse(std::function<void(nlmsghdr*)> callback){
                     if(nh->nlmsg_seq != sequence_number_){
                         throw std::runtime_error("Unexpected sequence number in the ack");
                     }
-                    return;
                 default:
                     if(callback){
                         callback(nh);

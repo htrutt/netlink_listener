@@ -71,6 +71,18 @@ std::string parseInterfaceName(const nlmsghdr *nh){
     return std::string(name);
 }
 
+unsigned int parseInterfaceMtu(const nlmsghdr *nh){
+    struct ifinfomsg *ifi = (struct ifinfomsg*)NLMSG_DATA(nh); // get data from the network interface
+    int len = nh->nlmsg_len;
+    rtattr *rtattr = IFLA_RTA(ifi);
+    auto rt_map = parseRtAttr(rtattr, len);
+
+    auto iter = rt_map.find(IFLA_MTU);
+    if(iter != rt_map.end()){
+        return *static_cast<unsigned int*>(RTA_DATA(iter->second));
+    }
+    return 0;
+}
 
 std::map<int, struct rtattr*> parseRtAttr(struct rtattr *rtattr, int len){
     auto rt_attr_map = std::map<int, struct rtattr*>();

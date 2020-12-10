@@ -11,6 +11,7 @@ namespace network_monitor::command{
 class ICommand{
     public:
         virtual void execute() = 0;
+        virtual ~ICommand() = default;
 };
 
 class BaseCommand : public ICommand{

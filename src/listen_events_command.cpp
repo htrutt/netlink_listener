@@ -12,7 +12,7 @@ void ListenEventsCommand::execute(){
 void ListenEventsCommand::event_parser(nlmsghdr *nh){
     std::cout << "New nlmsghdr, seq: " << nh->nlmsg_seq << std::endl;
     std::string if_name, if_addr;
-    int if_index;
+    int if_index, if_mtu;
     InterfaceState if_state;
     switch(nh->nlmsg_type){
         case RTM_NEWROUTE:
@@ -34,7 +34,10 @@ void ListenEventsCommand::event_parser(nlmsghdr *nh){
             if_name = parseInterfaceName(nh);
             if_state = parseInterfaceState(nh);
             if_index = parseInterfaceIndex(nh);
-            std::cout << "Link was added, name[index] " << if_name << "[" << if_index <<"] inteface state " << if_state <<  std::endl;
+            if_mtu = parseInterfaceMtu(nh);
+            std::cout << "Link was added, name[index] " << if_name << "[" << if_index <<"] inteface state " << if_state 
+                    << " MTU " << if_mtu
+                    <<  std::endl;
             break;
     }
 }
